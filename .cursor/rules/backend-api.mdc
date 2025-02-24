@@ -1,0 +1,54 @@
+---
+description: 
+globs: 
+---
+
+# Below is the current state of the backend API our frontend will be communicating with =.
+
+## Backend API Documentation
+
+### Authentication Endpoints
+
+POST /api/auth/register
+Body: { "email": "string", "password": "string" }
+Response: { "token": "string", "email": "string" }
+
+POST /api/auth/login 
+Body: { "email": "string", "password": "string" }
+Response: { "token": "string", "email": "string" }
+
+### Notes Endpoints
+
+GET /api/notes
+Header: Authorization: Bearer {token}
+Response: [{ "id": "UUID", "title": "string", "content": "string", "updatedAt": "datetime" }]
+
+POST /api/notes
+Header: Authorization: Bearer {token}
+Body: { "title": "string", "content": "string" }
+Response: { "id": "UUID", "title": "string", "content": "string", "updatedAt": "datetime" }
+
+PUT /api/notes/{id}
+Header: Authorization: Bearer {token}
+Body: { "title": "string", "content": "string" }
+Response: { "id": "UUID", "title": "string", "content": "string", "updatedAt": "datetime" }
+
+DELETE /api/notes/{id}
+Header: Authorization: Bearer {token}
+Response: 200 OK
+
+### API Features
+- JWT Authentication required for all note operations
+- UUIDs used for all IDs
+- Notes are ordered by updatedAt (descending)
+- Token expiration: 7 days
+
+### Error Responses
+{
+    "message": "string" // Error description
+}
+
+Common status codes:
+- 401: Unauthorized
+- 409: Email already exists
+- 404: Note not found
