@@ -1,4 +1,3 @@
-import { useEffect } from 'react';
 import { useNotes } from '../../contexts/NotesContext';
 import { useAuth } from '../../contexts/AuthContext';
 
