@@ -58,9 +58,9 @@ export default function NoteEditor({ onSave }: NoteEditorProps) {
   const handleSave = async () => {
     try {
       if (currentNote) {
-        await updateNote(currentNote.id, title, content);
+        await updateNote(currentNote.id, title, content, indentLevels);
       } else {
-        await createNote(title, content);
+        await createNote(title, content, indentLevels);
       }
       setIsEdited(false);
       lastSaveRef.current = new Date();

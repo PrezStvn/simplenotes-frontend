@@ -2,7 +2,7 @@ export interface Note {
   id: string;
   title: string;
   content: string;
-  indentation?: number[];  // Array of indentation levels for each line
+  indentLevels: number[];  // Add this
   createdAt: string;
   updatedAt: string;
 }
