@@ -25,9 +25,9 @@ export default function Register() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-editor-bg">
-      <div className="bg-editor-sidebar p-8 rounded-lg shadow-lg w-full max-w-md">
-        <h2 className="text-2xl font-bold mb-6 text-editor-text">Register</h2>
+    <div className="auth-container">
+      <div className="auth-form-box">
+        <h2 className="auth-title">Register</h2>
         
         {error && (
           <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 rounded text-red-500">

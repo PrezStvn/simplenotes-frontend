@@ -5,6 +5,7 @@ import ProtectedRoute from './components/auth/ProtectedRoute';
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
 import MainLayout from './components/layout/MainLayout';
+import AuthRoute from './components/auth/AuthRoute';
 
 function App() {
   return (
@@ -12,8 +13,22 @@ function App() {
       <NotesProvider>
         <AuthProvider>
           <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/register" element={<Register />} />
+            <Route 
+              path="/login" 
+              element={
+                <AuthRoute>
+                  <Login />
+                </AuthRoute>
+              } 
+            />
+            <Route 
+              path="/register" 
+              element={
+                <AuthRoute>
+                  <Register />
+                </AuthRoute>
+              } 
+            />
             <Route
               path="/"
               element={
