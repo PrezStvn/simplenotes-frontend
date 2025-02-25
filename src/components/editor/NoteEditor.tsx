@@ -13,8 +13,11 @@ export default function NoteEditor({ onSave }: NoteEditorProps) {
   const [isEdited, setIsEdited] = useState(false);
   const [isPreview, setIsPreview] = useState(false);
   const [lineCount, setLineCount] = useState(1);
+  const [indentLevels, setIndentLevels] = useState<number[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const lastSaveRef = useRef(new Date());
+  const INDENT_SIZE = 4; // 4 spaces per level
+  const MAX_INDENT = 8;
 
   useEffect(() => {
     if (currentNote) {
@@ -55,9 +58,9 @@ export default function NoteEditor({ onSave }: NoteEditorProps) {
   const handleSave = async () => {
     try {
       if (currentNote) {
-        await updateNote(currentNote.id, title, content);
+        await updateNote(currentNote.id, title, content, indentLevels);
       } else {
-        await createNote(title, content);
+        await createNote(title, content, indentLevels);
       }
       setIsEdited(false);
       lastSaveRef.current = new Date();
@@ -67,13 +70,62 @@ export default function NoteEditor({ onSave }: NoteEditorProps) {
     }
   };
 
-  const handleTabKey = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+  const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const newContent = e.target.value;
+    const oldLineCount = content.split('\n').length;
+    const newLineCount = newContent.split('\n').length;
+    
+    // If we've lost a line, find which one and remove its indent
+    if (newLineCount < oldLineCount) {
+      const currentPos = e.target.selectionStart;
+      const removedLine = content.slice(0, currentPos).split('\n').length - 1;
+      
+      const newIndentLevels = [...indentLevels];
+      const numLinesToRemove = oldLineCount - newLineCount;
+      newIndentLevels.splice(removedLine, numLinesToRemove);
+
+      // For line 0, calculate actual indentation
+      if (removedLine === 0) {
+        const leadingSpaces = newContent.match(/^[ ]*/)?.[0]?.length || 0;
+        newIndentLevels[0] = Math.floor(leadingSpaces / INDENT_SIZE);
+      }
+      
+      setIndentLevels(newIndentLevels);
+    }
+    
+    setContent(newContent);
+    setIsEdited(true);
+    setLineCount(newLineCount);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Tab') {
       e.preventDefault();
       const start = e.currentTarget.selectionStart;
-      const end = e.currentTarget.selectionEnd;
-      const newContent = content.substring(0, start) + '    ' + content.substring(end);
+      
+      // Get current line number
+      const currentLine = content.slice(0, start).split('\n').length - 1;
+      
+      // Calculate new indent level
+      const currentIndent = indentLevels[currentLine] || 0;
+      const newIndent = e.shiftKey 
+        ? Math.max(0, currentIndent - 1)
+        : Math.min(MAX_INDENT, currentIndent + 1);
+      
+      // Update indent levels
+      const newIndentLevels = [...indentLevels];
+      newIndentLevels[currentLine] = newIndent;
+      setIndentLevels(newIndentLevels);
+
+      // Insert spaces at start of line
+      const lineStart = content.lastIndexOf('\n', start - 1) + 1;
+      const newContent = 
+        content.slice(0, lineStart) + 
+        ' '.repeat(newIndent * INDENT_SIZE) +
+        content.slice(lineStart).trimStart();
+      
       setContent(newContent);
+      setIsEdited(true);
       
       setTimeout(() => {
         if (textareaRef.current) {
@@ -81,13 +133,44 @@ export default function NoteEditor({ onSave }: NoteEditorProps) {
         }
       }, 0);
     }
-  };
-
-  const handleContentChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newContent = e.target.value;
-    setContent(newContent);
-    setIsEdited(true);
-    setLineCount(newContent.split('\n').length);
+    
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      const start = e.currentTarget.selectionStart;
+      const currentLine = content.slice(0, start).split('\n').length - 1;
+      
+      // Log for debugging
+      console.log('Current line:', currentLine);
+      console.log('Indent levels:', indentLevels);
+      console.log('Current indent:', indentLevels[currentLine]);
+      
+      // Get current indent level, default to 0 if undefined
+      const currentIndent = indentLevels[currentLine] || 0;
+      
+      // Add new line with same indentation
+      const newContent = 
+        content.slice(0, start) + 
+        '\n' + 
+        ' '.repeat(currentIndent * INDENT_SIZE) +
+        content.slice(start);
+      
+      setContent(newContent);
+      
+      // Update indent levels array
+      const newIndentLevels = [...indentLevels];
+      newIndentLevels[currentLine+1] = currentIndent;  // Set next line's indent
+      setIndentLevels(newIndentLevels);
+      
+      setIsEdited(true);
+      
+      // Move cursor
+      setTimeout(() => {
+        if (textareaRef.current) {
+          const newPos = start + 1 + (currentIndent * INDENT_SIZE);
+          textareaRef.current.selectionStart = textareaRef.current.selectionEnd = newPos;
+        }
+      }, 0);
+    }
   };
 
   return (
@@ -158,7 +241,7 @@ export default function NoteEditor({ onSave }: NoteEditorProps) {
             ref={textareaRef}
             value={content}
             onChange={handleContentChange}
-            onKeyDown={handleTabKey}
+            onKeyDown={handleKeyDown}
             className="w-full h-full bg-transparent p-4 resize-none outline-none
                      font-mono text-editor-text placeholder-editor-text/50
                      leading-relaxed"

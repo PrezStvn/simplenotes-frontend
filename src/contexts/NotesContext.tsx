@@ -6,8 +6,8 @@ interface NotesContextType {
   notes: Note[];
   currentNote: Note | null;
   setCurrentNote: (note: Note | null) => void;
-  createNote: (title: string, content: string) => Promise<Note>;
-  updateNote: (id: string, title: string, content: string) => Promise<Note>;
+  createNote: (title: string, content: string, indentLevels: number[]) => Promise<Note>;
+  updateNote: (id: string, title: string, content: string, indentLevels: number[]) => Promise<Note>;
   deleteNote: (id: string) => Promise<void>;
   fetchNotes: () => Promise<void>;
 }
@@ -24,14 +24,14 @@ export const NotesProvider = ({ children }: { children: ReactNode }) => {
     setNotes(fetchedNotes);
   };
 
-  const createNote = async (title: string, content: string) => {
-    const newNote = await notesApi.createNote({ title, content });
+  const createNote = async (title: string, content: string, indentLevels: number[]) => {
+    const newNote = await notesApi.createNote({ title, content, indentLevels });
     setNotes([...notes, newNote]);
     return newNote;
   };
 
-  const updateNote = async (id: string, title: string, content: string) => {
-    const updatedNote = await notesApi.updateNote(id, { title, content });
+  const updateNote = async (id: string, title: string, content: string, indentLevels: number[]) => {
+    const updatedNote = await notesApi.updateNote(id, { title, content, indentLevels });
     setNotes(notes.map(note => note.id === id ? updatedNote : note));
     return updatedNote;
   };
