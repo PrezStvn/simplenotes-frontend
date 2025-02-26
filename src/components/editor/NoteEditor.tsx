@@ -1,10 +1,10 @@
 import { useNoteEditor } from '../../hooks/useNoteEditor';
-import { TitleBar } from './TitleBar';
-import { LineNumbers } from './LineNumbers';
-import { IndentGuides } from './IndentGuides';
-import { EditorContent } from './EditorContent';
-import { PreviewContent } from './PreviewContent';
-import { StatusBar } from './StatusBar';
+import { TitleBar } from './components/TitleBar';
+import { LineNumbers } from './components/LineNumbers';
+import { IndentGuides } from './components/IndentGuides';
+import { EditorContent } from './components/EditorContent';
+import { PreviewContent } from './components/PreviewContent';
+import { StatusBar } from './components/StatusBar';
 
 interface NoteEditorProps {
   onSave?: () => void;
