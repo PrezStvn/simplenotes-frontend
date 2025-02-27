@@ -45,6 +45,7 @@ export default function NoteEditor({ onSave }: NoteEditorProps) {
       <div className="flex-1 overflow-auto flex relative">
         {!isPreview && <LineNumbers count={lineCount} />}
         
+        <div className="relative flex-1">
         {!isPreview && (
           <IndentGuides 
             content={content}
@@ -60,9 +61,10 @@ export default function NoteEditor({ onSave }: NoteEditorProps) {
             content={content}
             onChange={handleContentChange}
             onKeyDown={handleKeyDown}
-            textareaRef={textareaRef}
-          />
-        )}
+              textareaRef={textareaRef}
+            />
+          )}
+        </div>
       </div>
 
       <StatusBar 

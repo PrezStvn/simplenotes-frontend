@@ -1,6 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNotes } from '../contexts/NotesContext';
-import { Note } from '../types';
 
 interface UseNoteEditorProps {
   onSave?: () => void;
@@ -16,7 +15,7 @@ export const useNoteEditor = ({ onSave }: UseNoteEditorProps) => {
   const [indentLevels, setIndentLevels] = useState<number[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const lastSaveRef = useRef(new Date());
-  const INDENT_SIZE = 4;
+  const INDENT_SIZE = 2;
   const MAX_INDENT = 8;
 
   useEffect(() => {
@@ -75,22 +74,29 @@ export const useNoteEditor = ({ onSave }: UseNoteEditorProps) => {
     const oldLineCount = content.split('\n').length;
     const newLineCount = newContent.split('\n').length;
     
-    // If we've lost a line, find which one and remove its indent
+    // Handle line removal
     if (newLineCount < oldLineCount) {
       const currentPos = e.target.selectionStart;
-      const removedLine = content.slice(0, currentPos).split('\n').length - 1;
+      const removedLine = Math.min(
+        content.slice(0, currentPos).split('\n').length,
+        oldLineCount - 1  // Ensure we don't exceed array bounds
+      );
       
-      const newIndentLevels = [...indentLevels];
-      const numLinesToRemove = oldLineCount - newLineCount;
-      newIndentLevels.splice(removedLine, numLinesToRemove);
-
-      // For line 0, calculate actual indentation
-      if (removedLine === 0) {
-        const leadingSpaces = newContent.match(/^[ ]*/)?.[0]?.length || 0;
-        newIndentLevels[0] = Math.floor(leadingSpaces / INDENT_SIZE);
-      }
-      
-      setIndentLevels(newIndentLevels);
+      setIndentLevels(prevLevels => {
+        // Ensure we don't remove more lines than we have
+        const numLinesToRemove = Math.min(
+          oldLineCount - newLineCount,
+          prevLevels.length - removedLine
+        );
+        
+        if (numLinesToRemove <= 0 || removedLine >= prevLevels.length) {
+          return prevLevels.slice(0, newLineCount);
+        }
+        
+        const newIndentLevels = [...prevLevels];
+        newIndentLevels.splice(removedLine, numLinesToRemove);
+        return newIndentLevels.slice(0, newLineCount);
+      });
     }
     
     setContent(newContent);
@@ -122,10 +128,13 @@ export const useNoteEditor = ({ onSave }: UseNoteEditorProps) => {
         ? Math.max(0, currentIndent - 1)
         : Math.min(MAX_INDENT, currentIndent + 1);
       
-      // Update indent levels
-      const newIndentLevels = [...indentLevels];
-      newIndentLevels[currentLine] = newIndent;
-      setIndentLevels(newIndentLevels);
+      // Directly update the indent level for the current line
+      setIndentLevels(prevLevels => {
+        const updatedLevels = [...prevLevels];
+        updatedLevels[currentLine] = newIndent;
+        // Truncate array to match actual content length
+        return updatedLevels.slice(0, content.split('\n').length);
+      });
 
       // Insert spaces at start of line
       const lineStart = content.lastIndexOf('\n', start - 1) + 1;
@@ -136,6 +145,7 @@ export const useNoteEditor = ({ onSave }: UseNoteEditorProps) => {
       
       setContent(newContent);
       setIsEdited(true);
+      setLineCount(newContent.split('\n').length);
       
       setTimeout(() => {
         if (textareaRef.current) {
@@ -160,22 +170,70 @@ export const useNoteEditor = ({ onSave }: UseNoteEditorProps) => {
         ' '.repeat(currentIndent * INDENT_SIZE) +
         content.slice(start);
       
+      const newLineCount = newContent.split('\n').length;
+      
       setContent(newContent);
-      
-      // Update indent levels array
-      const newIndentLevels = [...indentLevels];
-      newIndentLevels[currentLine + 1] = currentIndent;  // Set next line's indent
-      setIndentLevels(newIndentLevels);
-      
       setIsEdited(true);
+      setLineCount(newLineCount);
       
-      // Move cursor
+      // Update indent levels array - shift all subsequent levels up by one
+      setIndentLevels(prevLevels => {
+        const updatedLevels = [...prevLevels];
+        // Insert the new line's indent level and shift everything after it
+        updatedLevels.splice(currentLine + 1, 0, currentIndent);
+        // Truncate array to match actual content length
+        return updatedLevels.slice(0, newLineCount);
+      });
+      
       setTimeout(() => {
         if (textareaRef.current) {
           const newPos = start + 1 + (currentIndent * INDENT_SIZE);
           textareaRef.current.selectionStart = textareaRef.current.selectionEnd = newPos;
         }
       }, 0);
+    }
+
+    if (e.key === 'Backspace') {
+      const start = e.currentTarget.selectionStart;
+      const currentLine = content.slice(0, start).split('\n').length - 1;
+      const lineStart = content.lastIndexOf('\n', start - 1) + 1;
+      const lineEnd = content.indexOf('\n', start);
+      const nextLineContent = lineEnd === -1 ? '' : content.slice(lineEnd);
+      
+      // Only handle indentation reduction within a line
+      if (start > lineStart && 
+          content.slice(lineStart, start).trim() === '' && 
+          content[start - 1] === ' ') {
+        e.preventDefault();
+        
+        const currentIndent = indentLevels[currentLine] || 0;
+        const newIndent = Math.max(0, currentIndent - 1);
+        
+        // Update content, only trimming the current line
+        const newContent = 
+          content.slice(0, lineStart) + 
+          ' '.repeat(newIndent * INDENT_SIZE) +
+          content.slice(lineStart, lineEnd).trimStart() +
+          nextLineContent;
+        
+        setContent(newContent);
+        setIsEdited(true);
+        
+        // Update indent level for current line
+        setIndentLevels(prevLevels => {
+          const updatedLevels = [...prevLevels];
+          updatedLevels[currentLine] = newIndent;
+          return updatedLevels.slice(0, newContent.split('\n').length);
+        });
+        
+        // Update cursor position
+        setTimeout(() => {
+          if (textareaRef.current) {
+            const newPos = lineStart + (newIndent * INDENT_SIZE);
+            textareaRef.current.selectionStart = textareaRef.current.selectionEnd = newPos;
+          }
+        }, 0);
+      }
     }
   };
 
